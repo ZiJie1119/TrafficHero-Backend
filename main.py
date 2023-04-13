@@ -4,7 +4,6 @@ import json
 from fastapi import FastAPI
 
 tags_metadata = [
-    
     {
         "name": "serviceArea",
         "description": "All the ServiceArea that has been provided on TDX"
@@ -16,8 +15,7 @@ tags_metadata = [
     {
         "name": "sideParking",
         "description": "All the sideParking that has been provided on TDX. NewTaipei, Tainan, HualienCounty"
-    },
-    
+    }, 
 ]
 app = FastAPI(openapi_tags=tags_metadata)
 
