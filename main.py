@@ -19,15 +19,15 @@ tags_metadata = [
 ]
 app = FastAPI(openapi_tags=tags_metadata)
 
-
+# ----------Verify the TDX Account----------#
+app_id = 'b10923015-1aa2500a-b917-4539'
+app_key = '009cb4d7-a507-47f1-bab6-7da5182e6e95'
+auth_url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
+url = "https://tdx.transportdata.tw/api/basic/v1/Parking/OffStreet/ParkingAvailability/Road/Freeway/ServiceArea?%24top=30&%24format=JSON"
+# ----------Verify the TDX Account----------#
 
 @app.get("/serviceArea",tags=["serviceArea"])
 async def serviceArea():
-    # ----------Verify the TDX Account----------#
-    app_id = 'b10923015-1aa2500a-b917-4539'
-    app_key = '009cb4d7-a507-47f1-bab6-7da5182e6e95'
-    auth_url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
-    url = "https://tdx.transportdata.tw/api/basic/v1/Parking/OffStreet/ParkingAvailability/Road/Freeway/ServiceArea?%24top=30&%24format=JSON"
     serviceAreaName = []
     serviceAreaSpace = []
     class Auth():
@@ -73,11 +73,6 @@ async def serviceArea():
 
 @app.get("/cityParking/{cityName}",tags = ["cityParking"])
 async def cityParking(cityName):
-    # ----------Verify the TDX Account----------#
-    app_id = 'b10923015-1aa2500a-b917-4539'
-    app_key = '009cb4d7-a507-47f1-bab6-7da5182e6e95'
-    auth_url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
-    url = "https://tdx.transportdata.tw/api/basic/v1/Parking/OffStreet/ParkingAvailability/City/"+cityName+"?%24top=30&%24format=JSON"
     cityParkingSpace = []
     class Auth():
         def __init__(self, app_id, app_key):
@@ -121,11 +116,6 @@ async def cityParking(cityName):
 
 @app.get("/sideParking/{cityName}",tags = ["sideParking"])
 async def sideParking(cityName):
-    # ----------Verify the TDX Account----------#
-    app_id = 'b10923015-1aa2500a-b917-4539'
-    app_key = '009cb4d7-a507-47f1-bab6-7da5182e6e95'
-    auth_url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
-    url = "https://tdx.transportdata.tw/api/basic/v1/Parking/OnStreet/ParkingSegmentAvailability/City/"+cityName+"?%24top=30&%24format=JSON"
     sideParkingSpace = []
     class Auth():
         def __init__(self, app_id, app_key):
