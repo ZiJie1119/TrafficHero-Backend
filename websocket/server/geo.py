@@ -39,7 +39,8 @@ South = browser.find_elements(By.NAME,'S')
 Info = []
 AddressTemp = []
 locationAll= []
-points = [] 
+points = []
+point2 = [] 
     
 for data in North:
     Info.append(data.text.split('\n'))
@@ -106,7 +107,7 @@ for address in AddressTemp:
     # address[1]：快速道路 、 address[2]：地點+里程 、 mileage：里程 、 direction：方向、mileageK：整數里程、mileageF1、F2：小數里程
     #https://api.opencube.tw/location/address?keyword=北部 [台61線((西濱快速))] 北上32.7km&key=AIzaSyC3JojC31oVXNGbGFDGa_7Q0pPwqvfIzlY
             url = 'https://tdx.transportdata.tw/api/basic/V3/Map/Road/Sign/RoadClass/1/RoadName/'+address[1]+'/'+str(mileageK)+'K+'+mileageF1+'/to/'+str(mileageK)+'K+'+str(mileageF2)+'?%24top=1&%24format=JSON'
-#             print(url)
+            # print(url)
             try:
                 d = data(app_id, app_key, auth_response)
                 data_response = requests.get(url, headers=d.get_data_header())
@@ -119,19 +120,22 @@ for address in AddressTemp:
                 locationAll.append(json.loads(data_response.text))
     except:
         browser.close()
-browser.close()
+# browser.close()
 
 for loc in locationAll:
     tarlat = str(loc[0]["Lat"])
     tarlng = str(loc[0]["Lon"])
-for i in range(0, 360, 360//80):
-    lat_new, lng_new, _ = geodesic(kilometers=1).destination((tarlat, tarlng), i)
-    points.append([lat_new, lng_new])
-# print(points)
+    for i in range(0, 360, 360//80):
+        lat_new, lng_new, _ = geodesic(kilometers=1).destination((tarlat, tarlng), i)
+        points.append([lat_new, lng_new])
+    point2.append(points)
+
 def setLatLng(lat,lng):
     point = Point([lat,lng])
-    polygon = Polygon(points)
-    print(polygon.contains(point))
+    for p in point2:
+        polygon = Polygon(p)
+        print(polygon.contains(point))
+    
 lat = eval(sys.argv[1])
 lng = eval(sys.argv[2])
 setLatLng(lat,lng)
