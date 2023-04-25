@@ -60,7 +60,8 @@ def response(url):
         auth_response = requests.post(auth_url, a.get_auth_header())
         d = data(app_id, app_key, auth_response)
         data_response = requests.get(url, headers=d.get_data_header())
-    return data_response.text
+    dataAll = json.loads(data_response.text)
+    return dataAll
 # ----------Verify the TDX Account----------#
 
 @app.get("/serviceArea",tags=["serviceArea"])
@@ -68,7 +69,7 @@ async def serviceArea():
     url = "https://tdx.transportdata.tw/api/basic/v1/Parking/OffStreet/ParkingAvailability/Road/Freeway/ServiceArea?%24top=30&%24format=JSON"
     serviceAreaName = []
     serviceAreaSpace = []
-    dataAll = json.loads(response(url))
+    dataAll = response(url)
     for service in dataAll["ParkingAvailabilities"]:
         # serviceAreaName.append(service["CarParkName"]["Zh_tw"])
         serviceAreaSpace.append(service["CarParkName"]["Zh_tw"]+"剩餘車位："+ str(service["AvailableSpaces"]))
@@ -78,7 +79,7 @@ async def serviceArea():
 async def cityParking(cityName):
     url = "https://tdx.transportdata.tw/api/basic/v1/Parking/OffStreet/ParkingAvailability/City/"+cityName+"?%24top=30&%24format=JSON"
     cityParkingSpace = []
-    dataAll = json.loads(response(url))
+    dataAll = response(url)
     for city in dataAll["ParkingAvailabilities"]:
         cityParkingSpace.append(city["CarParkName"]["Zh_tw"]+"剩餘車位："+ str(city["AvailableSpaces"]))
     return {"cityParkingSpace":cityParkingSpace}
@@ -87,7 +88,7 @@ async def cityParking(cityName):
 async def sideParking(cityName):
     url = "https://tdx.transportdata.tw/api/basic/v1/Parking/OnStreet/ParkingSegmentAvailability/City/"+cityName+"?%24top=30&%24format=JSON"
     sideParkingSpace = []
-    dataAll = json.loads(response(url))
+    dataAll = response(url)
     for side in dataAll["CurbParkingSegmentAvailabilities"]:
         sideParkingSpace.append(side["ParkingSegmentName"]["Zh_tw"] +" 剩餘位置： " +str(side["AvailableSpaces"]))
     return {"sideParking":sideParkingSpace}
