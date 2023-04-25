@@ -1,0 +1,14 @@
+{
+  "name": "group_server",
+  "version": "1.0.0",
+  "description": "This is a server which is used to maintain group create and join",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.13.0"
+  }
+}
