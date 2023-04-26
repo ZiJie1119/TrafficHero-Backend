@@ -3,24 +3,11 @@ from pprint import pprint
 import json
 from fastapi import FastAPI
 from auth import get_data_response
+from metadata import tags_metadata
 
 app_id = 'b10923015-1aa2500a-b917-4539' #TDX-Client Id
 app_key = '009cb4d7-a507-47f1-bab6-7da5182e6e95' #TDX-Client Secret
 
-tags_metadata = [
-    {
-        "name": "serviceArea",
-        "description": "All the ServiceArea that has been provided on TDX"
-    },
-    {
-        "name": "cityParking",
-        "description": "Taoyuan, Tainan, Kaohsiung, Keelung, YilanCounty, HualienCounty. These above are available country name"
-    },
-    {
-        "name": "sideParking",
-        "description": "All the sideParking that has been provided on TDX. NewTaipei, Tainan, HualienCounty"
-    }, 
-]
 app = FastAPI(openapi_tags=tags_metadata)
 
 @app.get("/serviceArea",tags=["serviceArea"])
