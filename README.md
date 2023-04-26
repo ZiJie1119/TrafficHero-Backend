@@ -4,6 +4,8 @@
 ```
 pip install fastapi
 pip install uvicorn[standard]
+pip install selenium
+pip install webdriver-manager
 ```
 
 ## 開啟後端
