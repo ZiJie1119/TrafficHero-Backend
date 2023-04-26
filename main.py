@@ -4,6 +4,9 @@ import json
 from fastapi import FastAPI
 from auth import get_data_response
 
+app_id = 'b10923015-1aa2500a-b917-4539' #TDX-Client Id
+app_key = '009cb4d7-a507-47f1-bab6-7da5182e6e95' #TDX-Client Secret
+
 tags_metadata = [
     {
         "name": "serviceArea",
@@ -19,9 +22,6 @@ tags_metadata = [
     }, 
 ]
 app = FastAPI(openapi_tags=tags_metadata)
-
-app_id = 'b10923015-1aa2500a-b917-4539'
-app_key = '009cb4d7-a507-47f1-bab6-7da5182e6e95'
 
 @app.get("/serviceArea",tags=["serviceArea"])
 async def serviceArea():
