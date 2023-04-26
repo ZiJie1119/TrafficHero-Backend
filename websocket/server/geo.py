@@ -17,18 +17,7 @@ import requests
 import json
 from selenium.webdriver.common.by import By
 
-# In[4]:
 
-# The polygon was made of 65 point
-# each point has its own lng,lat
-# every triple of lng；120.5327、120.5318、120.5308 will differ 0.0010
-# next triple of lng : 120.5299、120.5290、120.5281  will differ 0.0009
-
-
-# point1 = Point([114.34605717658997,30.475584995561178])
-# point2 = Point([120.53663880498414,23.690548816857273])
-# polygon = Polygon(polygon_data)
-# print(polygon.contains(point1))
 browser = webdriver.Chrome(ChromeDriverManager().install())
 browser.get("https://rtr.pbs.gov.tw/pbsmgt/RoadAll.html")
 RoadInfo = browser.find_elements(By.NAME,'tr')
@@ -40,17 +29,19 @@ Info = []
 AddressTemp = []
 locationAll= []
 points = []
-point2 = [] 
-    
+point2 = []
+RoadCondition = [] #路況說明
+Index = 0
+
+
+
 for data in North:
     Info.append(data.text.split('\n'))
-
 for size in range(0,len(Info)):
     if(Info[size][0] == "道路施工"):
         AddressTemp.append((Info[size][1]).split(" "))
+        RoadCondition.append(Info[size][2])
         
-        
-            
 # ----------Verify the TDX Account----------#
 app_id = 'b10923015-1aa2500a-b917-4539'
 app_key = '009cb4d7-a507-47f1-bab6-7da5182e6e95'
@@ -81,10 +72,10 @@ class data():
         return {
             'authorization': 'Bearer '+access_token
     }
-# ----------Verify the TDX Account----------#
-
+# ----------Verify the TDX Account----------#         
 
 for address in AddressTemp:
+    Index = Index + 1
     address[1] = address[1].replace("[","")
     address[1] = address[1].replace("]","")
     address[1] = address[1].replace(address[1][-8:],"")
@@ -105,7 +96,6 @@ for address in AddressTemp:
                 mileageF2 = int(mileageF1+100)
                 mileageF1 = str(mileageF1)        
     # address[1]：快速道路 、 address[2]：地點+里程 、 mileage：里程 、 direction：方向、mileageK：整數里程、mileageF1、F2：小數里程
-    #https://api.opencube.tw/location/address?keyword=北部 [台61線((西濱快速))] 北上32.7km&key=AIzaSyC3JojC31oVXNGbGFDGa_7Q0pPwqvfIzlY
             url = 'https://tdx.transportdata.tw/api/basic/V3/Map/Road/Sign/RoadClass/1/RoadName/'+address[1]+'/'+str(mileageK)+'K+'+mileageF1+'/to/'+str(mileageK)+'K+'+str(mileageF2)+'?%24top=1&%24format=JSON'
             # print(url)
             try:
@@ -118,24 +108,33 @@ for address in AddressTemp:
                 data_response = requests.get(url, headers=d.get_data_header())
             if(len(json.loads(data_response.text)) != 0):
                 locationAll.append(json.loads(data_response.text))
+            else:
+                try:
+                    RoadCondition.pop(Index)
+                except:
+                    next          
     except:
         browser.close()
-# browser.close()
+
 
 for loc in locationAll:
     tarlat = str(loc[0]["Lat"])
     tarlng = str(loc[0]["Lon"])
+    # print(str(tarlat)+" "+str(tarlng))
     for i in range(0, 360, 360//80):
         lat_new, lng_new, _ = geodesic(kilometers=1).destination((tarlat, tarlng), i)
         points.append([lat_new, lng_new])
-    point2.append(points)
+    point2.append(points) # Use each point to make circle, and store into point2
 
 def setLatLng(lat,lng):
+    Count = 0
     point = Point([lat,lng])
     for p in point2:
+        Count = Count + 1
         polygon = Polygon(p)
-        print(polygon.contains(point))
-    
+        print(polygon.contains(point)) # Detect whether the location is inside the point2 or not
+        if(polygon.contains(point)):
+            print(RoadCondition[Count-1])
 lat = eval(sys.argv[1])
 lng = eval(sys.argv[2])
 setLatLng(lat,lng)
