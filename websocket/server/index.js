@@ -22,6 +22,18 @@ function sendLatLng(loc1, loc2) {
     }
     });
 }
+var getRdCondition = new WebSocketServer({
+  port:5004,
+  handleProtocols:getRdCondition
+});
+getRdCondition.on('connection', function (wsGetRdCondition) {
+
+  wsGetRdCondition.on('message', function (msg) {
+    
+    let str = new String(msg);
+    console.log(msg);
+  })
+});
 var getLatLng = new WebSocketServer({
   port: 5003,
   handleProtocols: getLatLng
@@ -29,7 +41,7 @@ var getLatLng = new WebSocketServer({
 getLatLng.on('connection', function (wsGetLatLng) {
 
   wsGetLatLng.on('message', function (message) {
-   
+    
     let str = new String(message);
     
     let lat = str.split(',', 1);

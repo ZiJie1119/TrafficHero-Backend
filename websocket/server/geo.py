@@ -15,6 +15,8 @@ from selenium.webdriver.support.select import Select
 from webdriver_manager.chrome import ChromeDriverManager
 import requests
 import json
+import asyncio
+import websockets
 from selenium.webdriver.common.by import By
 
 
@@ -126,6 +128,12 @@ for loc in locationAll:
         points.append([lat_new, lng_new])
     point2.append(points) # Use each point to make circle, and store into point2
 
+async def sendRdCondition(rdCondition):
+    async with websockets.connect('ws://192.168.100.101:5004/getRdCondition') as websocket:
+        await websocket.send(rdCondition)
+        
+
+
 def setLatLng(lat,lng):
     Count = 0
     point = Point([lat,lng])
@@ -134,7 +142,9 @@ def setLatLng(lat,lng):
         polygon = Polygon(p)
         print(polygon.contains(point)) # Detect whether the location is inside the point2 or not
         if(polygon.contains(point)):
-            print(RoadCondition[Count-1])
+            # print(RoadCondition[Count-1])
+            asyncio.get_event_loop().run_until_complete(sendRdCondition(RoadCondition[Count-1]))
+
 lat = eval(sys.argv[1])
 lng = eval(sys.argv[2])
 setLatLng(lat,lng)
