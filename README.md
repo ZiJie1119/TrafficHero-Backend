@@ -2,10 +2,7 @@
 
 ## 安裝套件
 ```
-pip install fastapi
-pip install uvicorn[standard]
-pip install selenium
-pip install webdriver-manager
+pip install -r requirements.txt
 ```
 
 ## 開啟後端
