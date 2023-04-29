@@ -131,6 +131,7 @@ for loc in locationAll:
 async def sendRdCondition(rdCondition):
     async with websockets.connect('ws://192.168.100.101:5004/getRdCondition') as websocket:
         await websocket.send(rdCondition)
+        websocket.close()
         
 
 
@@ -141,7 +142,7 @@ def setLatLng(lat,lng):
         Count = Count + 1
         polygon = Polygon(p)
         print(polygon.contains(point)) # Detect whether the location is inside the point2 or not
-        if(polygon.contains(point)):
+        if(polygon.contains(point) == False): # If contain in the polygon then send the rdCondition to user
             # print(RoadCondition[Count-1])
             asyncio.get_event_loop().run_until_complete(sendRdCondition(RoadCondition[Count-1]))
 

@@ -3,9 +3,13 @@
 
 var WebSocketServer = require('ws').Server;
 var groupMember, joinCode;
+var data = [];
+
+function processData(str){
+  data.push(str);
+}
 
 function sendLatLng(loc1, loc2) {
-  
   const { exec } = require('child_process');
   exec('python geo.py '+loc1+' '+loc2,function(error,stdout,stderr){if(stdout.length >1){
     
@@ -26,14 +30,29 @@ var getRdCondition = new WebSocketServer({
   port:5004,
   handleProtocols:getRdCondition
 });
-getRdCondition.on('connection', function (wsGetRdCondition) {
-
-  wsGetRdCondition.on('message', function (msg) {
+getRdCondition.on('connection', function (wsRdCondition) {
+  wsRdCondition.on('message', function (msg) {
     
-    let str = new String(msg);
-    console.log(msg);
+    processData(String(msg));
+    // str = String(msg);
+    console.log(data);
+    
   })
 });
+
+var sendRdCondition = new WebSocketServer({
+  port:5005,
+  handleProtocols:sendRdCondition
+});
+sendRdCondition.on('connection', function (wsSendCondition) {
+  data.forEach(function(value){
+    wsSendCondition.send(value);
+  });
+  data = [];
+  
+});
+
+
 var getLatLng = new WebSocketServer({
   port: 5003,
   handleProtocols: getLatLng
