@@ -4,3 +4,4 @@ selenium
 webdriver-manager
 shapely
 selenium
+geopy
