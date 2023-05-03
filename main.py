@@ -2,7 +2,7 @@ import requests
 from pprint import pprint
 import json
 from fastapi import FastAPI
-from auth.TDX import get_data_response
+from auth.tdx import get_data_response
 from metadata import tags_metadata
 import subprocess
 app = FastAPI(openapi_tags=tags_metadata)

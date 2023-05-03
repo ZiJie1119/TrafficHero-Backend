@@ -7,7 +7,7 @@
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 import math
-from geopy.distance import geodesic
+import pygeodesic.geodesic as geodesic
 import sys
 from selenium import webdriver
 from selenium.webdriver import ActionChains
@@ -138,6 +138,7 @@ for loc in locationAll:
         lat_new, lng_new, _ = geodesic(kilometers=1).destination(
             (tarlat, tarlng), i)  # 生成某點 半徑 1 公里內的圓上的點
         points.append([lat_new, lng_new])
+        print(lat_new, lng_new)
     point2.append(points)  # 用每個點來製造圓並存進point2
 
 # python 回傳至 webSocket
@@ -145,14 +146,15 @@ for loc in locationAll:
 
 async def sendRdCondition(rdCondition):
     async with websockets.connect('ws://192.168.100.101:5004/getRdCondition') as websocket:
-        print(chatgpt(rdCondition))
-        await websocket.send(chatgpt(rdCondition))
+        # print(chatgpt(rdCondition))
+        await websocket.send((rdCondition))
 
 
 # 判斷使用者經緯度有無在point2裡的每個點所生成的園內
 def setLatLng(lat, lng):
     Count = 0
     point = Point([lat, lng])
+    print(point2)
     for p in point2:
         Count = Count + 1
         polygon = Polygon(p)
@@ -165,19 +167,19 @@ def setLatLng(lat, lng):
 
 
 # ChatGPT
-def chatgpt(str):
-    openai.api_key = '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'
-    user = str + "。幫我分類出地點、時間及事件"
+# def chatgpt(str):
+#     openai.api_key = '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'
+#     user = str + "。幫我分類出地點、時間及事件"
 
-    if user:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "我需要用繁體中文輸出"},
-                {"role": "user", "content": user},
-            ]
-        )
-        return (response['choices'][0]['message']['content'])
+#     if user:
+#         response = openai.ChatCompletion.create(
+#             model="gpt-3.5-turbo",
+#             messages=[
+#                 {"role": "system", "content": "我需要用繁體中文輸出"},
+#                 {"role": "user", "content": user},
+#             ]
+#         )
+#         return (response['choices'][0]['message']['content'])
 
 
 lat = eval(sys.argv[1])

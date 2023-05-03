@@ -1,6 +1,3 @@
-
-
-
 var WebSocketServer = require('ws').Server;
 var groupMember, joinCode;
 var RdCondition= [];
@@ -43,9 +40,7 @@ var getLatLng = new WebSocketServer({
 getLatLng.on('connection', function (wsGetLatLng) {
 
   wsGetLatLng.on('message', function (message) {
-    
     let str = new String(message);
-    
     let lat = str.split(',', 1);
     
     str = str.replace(lat + ",", "");
@@ -90,13 +85,15 @@ function processData(str){
 }
 
 function sendLatLng(loc1, loc2) {
+  
   const { exec } = require('child_process');
-  exec('python geo.py '+loc1+' '+loc2,function(error,stdout,stderr){if(stdout.length >1){
+  exec('python geo.py '+loc1+' '+loc2,function(error,stdout,stderr){
+    
+    if(stdout.length >1){
     
     console.log('Contain in the circle or not： ',stdout);
 
     }else{
-
     console.log('you don\'t offer args');
 
     }if(error) {
