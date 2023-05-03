@@ -4,9 +4,31 @@ import json
 from fastapi import FastAPI
 from auth.TDX import get_data_response
 from metadata import tags_metadata
-
+import subprocess
 app = FastAPI(openapi_tags=tags_metadata)
 
+#Websocket
+@app.get("/send_lat_lng")
+async def send_lat_lng(loc1: float, loc2: float):
+    return sendLatLng(loc1, loc2)
+
+def sendLatLng(loc1, loc2):
+    command = ['python', 'geo.py', str(loc1), str(loc2)]
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+    if result.stdout:
+        response = {'result': result.stdout.decode(errors='ignore').strip()}
+    else:
+        response = {'error': 'You don\'t offer args'}
+
+    if result.stderr:
+        error = result.stderr.decode(errors='ignore').strip()
+        if error:
+            print('stderr:', error)
+            response['error'] = error
+    return response
+
+#TDX
 @app.get("/serviceArea",tags=["serviceArea"])
 async def serviceArea():
     url = "https://tdx.transportdata.tw/api/basic/v1/Parking/OffStreet/ParkingAvailability/Road/Freeway/ServiceArea?%24top=30&%24format=JSON"
