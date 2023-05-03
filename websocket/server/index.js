@@ -3,10 +3,10 @@
 
 var WebSocketServer = require('ws').Server;
 var groupMember, joinCode;
-var data = [];
+var RdCondition= [];
 
 function processData(str){
-  data.push(str);
+  RdCondition.push(str);
 }
 
 function sendLatLng(loc1, loc2) {
@@ -34,8 +34,8 @@ getRdCondition.on('connection', function (wsRdCondition) {
   wsRdCondition.on('message', function (msg) {
     
     processData(String(msg));
-    // str = String(msg);
-    console.log(data);
+    
+    
     
   })
 });
@@ -45,11 +45,11 @@ var sendRdCondition = new WebSocketServer({
   handleProtocols:sendRdCondition
 });
 sendRdCondition.on('connection', function (wsSendCondition) {
-  data.forEach(function(value){
-    wsSendCondition.send(value);
-  });
-  data = [];
-  
+    
+    RdCondition.forEach(function(value){
+      wsSendCondition.send(String(value));
+    });
+    RdCondition = []; 
 });
 
 
