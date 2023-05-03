@@ -5,8 +5,6 @@ from fastapi import FastAPI
 from auth.TDX import get_data_response
 from metadata import tags_metadata
 
-
-
 app = FastAPI(openapi_tags=tags_metadata)
 
 @app.get("/serviceArea",tags=["serviceArea"])
