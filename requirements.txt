@@ -5,3 +5,4 @@ webdriver-manager
 shapely
 selenium
 geopy
+python-dotenv

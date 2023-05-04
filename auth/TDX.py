@@ -1,6 +1,25 @@
-# ----------Verify the TDX Account----------#
 import json
 import requests
+from dotenv import load_dotenv
+import os
+
+# 讀取.env檔案中的變數
+load_dotenv()
+
+def get_data_response(url):
+    auth_url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
+    app_id = os.getenv('TDX_app_id')
+    app_key = os.getenv('TDX_app_key')
+    auth = Auth(app_id, app_key)
+    try:
+        auth_response = requests.post(auth_url, auth.get_auth_header())
+        d = Data(app_id, app_key, auth_response)
+        data_response = requests.get(url, headers=d.get_data_header())
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        return None
+    data_all = json.loads(data_response.text)
+    return data_all
 
 class Auth():
     def __init__(self, app_id, app_key):
@@ -30,17 +49,3 @@ class Data():
         return {
             'authorization': 'Bearer '+access_token
         }
-
-def get_data_response(app_id, app_key, url):
-    auth_url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
-    auth = Auth(app_id, app_key)
-    try:
-        auth_response = requests.post(auth_url, auth.get_auth_header())
-        d = Data(app_id, app_key, auth_response)
-        data_response = requests.get(url, headers=d.get_data_header())
-    except Exception as e:
-        print(f"Error occurred: {str(e)}")
-        return None
-    data_all = json.loads(data_response.text)
-    return data_all
-# ----------Verify the TDX Account----------#
