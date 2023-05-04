@@ -21,6 +21,9 @@ from selenium.webdriver.common.by import By
 import openai
 from dotenv import load_dotenv
 import os
+import sys
+sys.path.append("../../")
+from auth.TDX import Auth,Data,get_data_response
 
 # 讀取.env檔案中的變數
 load_dotenv()
@@ -51,44 +54,6 @@ for size in range(0, len(Info)):
         AddressTemp.append((Info[size][1]).split(" "))  # 地點
         RoadCondition.append(Info[size][2])  # 路況
 
-# ----------Verify the TDX Account----------#
-app_id = os.getenv('TDX_app_id')
-app_key = os.getenv('TDX_app_key')
-auth_url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
-
-
-class Auth():
-    def __init__(self, app_id, app_key):
-        self.app_id = app_id
-        self.app_key = app_key
-
-    def get_auth_header(self):
-        content_type = 'application/x-www-form-urlencoded'
-        grant_type = 'client_credentials'
-
-        return {
-            'content-type': content_type,
-            'grant_type': grant_type,
-            'client_id': self.app_id,
-            'client_secret': self.app_key
-        }
-
-
-class data():
-    def __init__(self, app_id, app_key, auth_response):
-        self.app_id = app_id
-        self.app_key = app_key
-        self.auth_response = auth_response
-
-    def get_data_header(self):
-        auth_JSON = json.loads(self.auth_response.text)
-        access_token = auth_JSON.get('access_token')
-        return {
-            'authorization': 'Bearer '+access_token
-        }
-# ----------Verify the TDX Account----------#
-
-
 # ----------地點處理轉換成經緯度，因為TDX的快速道路門牌對照API有格式要求----------#
 for address in AddressTemp:
     Index = Index + 1
@@ -114,16 +79,8 @@ for address in AddressTemp:
             # address[1]：快速道路 、 address[2]：地點+里程 、 mileage：里程 、 direction：方向、mileageK：整數里程、mileageF1、F2：小數里程
             url = 'https://tdx.transportdata.tw/api/basic/V3/Map/Road/Sign/RoadClass/1/RoadName/' +address[1]+'/'+str(mileageK)+'K+'+mileageF1+'/to/'+str(mileageK)+'K+'+str(mileageF2)+'?%24top=1&%24format=JSON'
             # print(url)
-            try:
-                d = data(app_id, app_key, auth_response)
-                data_response = requests.get(url, headers=d.get_data_header())
-            except:
-                a = Auth(app_id, app_key)
-                auth_response = requests.post(auth_url, a.get_auth_header())
-                d = data(app_id, app_key, auth_response)
-                data_response = requests.get(url, headers=d.get_data_header())
-            if (len(json.loads(data_response.text)) != 0):
-                locationAll.append(json.loads(data_response.text))
+            if (len(get_data_response(url)) != 0):
+                locationAll.append(get_data_response(url))
             else:
                 try:
                     RoadCondition.pop(Index)
@@ -131,8 +88,8 @@ for address in AddressTemp:
                     next
     except:
         browser.close()
-
-
+        
+#生成某點半徑 N 公里的圓上座標
 for loc in locationAll:
     tarlat = str(loc[0]["Lat"])
     tarlng = str(loc[0]["Lon"])
@@ -141,15 +98,6 @@ for loc in locationAll:
             (tarlat, tarlng), i)  # 生成某點 半徑 1 公里內的圓上的點
         points.append([lat_new, lng_new])
     point2.append(points)  # 用每個點來製造圓並存進point2
-
-# python 回傳至 webSocket
-
-
-# python 回傳至 webSocket
-async def sendRdCondition(rdCondition):
-    async with websockets.connect('ws://192.168.100.101:5004/getRdCondition') as websocket:
-        
-        await websocket.send(rdCondition)
 
 
 # 判斷使用者經緯度有無在point2裡的每個點所生成的園內
@@ -165,7 +113,12 @@ def setLatLng(lat, lng):
         if (polygon.contains(point) == False):
             asyncio.get_event_loop().run_until_complete(
                 sendRdCondition(RoadCondition[Count-1]))
-
+            
+# python 回傳至 webSocket
+async def sendRdCondition(rdCondition):
+    async with websockets.connect('ws://192.168.100.101:5004/getRdCondition') as websocket:
+        #print(chatgpt(rdCondition))
+        await websocket.send(rdCondition)
 
 # ChatGPT
 def chatgpt(str):
