@@ -18,7 +18,7 @@ import json
 import asyncio
 import websockets
 from selenium.webdriver.common.by import By
-# import openai
+import openai
 
 browser = webdriver.Chrome(ChromeDriverManager().install())
 browser.get("https://rtr.pbs.gov.tw/pbsmgt/RoadAll.html")
@@ -142,6 +142,9 @@ for loc in locationAll:
     point2.append(points)  # 用每個點來製造圓並存進point2
 
 # python 回傳至 webSocket
+
+
+# python 回傳至 webSocket
 async def sendRdCondition(rdCondition):
     async with websockets.connect('ws://192.168.100.101:5004/getRdCondition') as websocket:
         # print(chatgpt(rdCondition))
@@ -166,8 +169,7 @@ def setLatLng(lat, lng):
 
 # ChatGPT
 # def chatgpt(str):
-
-
+#     openai.api_key = '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'
 #     user = str + "。幫我分類出地點、時間及事件"
 
 #     if user:
