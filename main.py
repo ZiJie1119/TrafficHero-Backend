@@ -1,10 +1,14 @@
 import requests
 from pprint import pprint
 import json
+import asyncio
+import time
 from fastapi import FastAPI
 from auth.TDX import get_data_response
 from metadata import tags_metadata
 import subprocess
+
+
 app = FastAPI(openapi_tags=tags_metadata)
 
 #Websocket
@@ -57,3 +61,10 @@ async def sideParking(cityName):
     for side in dataAll["CurbParkingSegmentAvailabilities"]:
         sideParkingSpace.append(side["ParkingSegmentName"]["Zh_tw"] +" 剩餘位置： " +str(side["AvailableSpaces"]))
     return {"sideParking":sideParkingSpace}
+
+#Websocket-test
+@app.get("/websocket")
+async def websocket():
+    command = ['node','index.js']
+    process = subprocess.Popen(command)
+    print(process.stdout)
