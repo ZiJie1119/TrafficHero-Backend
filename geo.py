@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-
-
-
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 import math
@@ -12,6 +6,8 @@ import sys
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support.select import Select
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import requests
 import json
@@ -28,7 +24,8 @@ from auth.TDX import Auth,Data,get_data_response
 # 讀取.env檔案中的變數
 load_dotenv()
 
-browser = webdriver.Chrome(ChromeDriverManager().install())
+service = Service(ChromeDriverManager().install())
+browser = webdriver.Chrome(service=service)
 browser.get("https://rtr.pbs.gov.tw/pbsmgt/RoadAll.html")
 
 # 透過selenium抓東、南、西、北的路況
