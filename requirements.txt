@@ -6,3 +6,4 @@ shapely
 selenium
 geopy
 python-dotenv
+openai
