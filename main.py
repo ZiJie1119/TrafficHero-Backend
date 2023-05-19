@@ -35,16 +35,7 @@ import threading
 from threading import *
 
 app = FastAPI(openapi_tags=tags_metadata)
-
-#Websocket
-@app.get("/send_lat_lng")
-async def send_lat_lng(lat: str, lng: str):
-    return sendLatLng(lat, lng)
-
-def sendLatLng(lat, lng):
-    print(lat,lng)
-    
-
+pointAll = []
 #TDX
 @app.get("/serviceArea",tags=["serviceArea"])
 async def serviceArea():
@@ -81,6 +72,8 @@ async def websocket():
     process = subprocess.Popen(command)
     print(process.stdout)
 
+
+
 def chatgpt(str):
     openai.api_key = app_id = os.getenv('OpenAI_Key')
     user = str + "。幫我分類出地點、時間及事件"
@@ -93,7 +86,6 @@ def chatgpt(str):
             ]
         )
         return (response['choices'][0]['message']['content'])
-
 def Crawling():
     #pymongo
     myclient = pymongo.MongoClient(os.getenv('MongoDB_URI'))
@@ -120,6 +112,7 @@ def Crawling():
     point2 = []
     RoadCondition = []  # 路況說明
     Index = 0
+    RdCount = []
 
 
     # 處理抓下來的北部資料
@@ -131,12 +124,17 @@ def Crawling():
 
     for size in range(0, len(Info)):
         if (Info[size][0] == "道路施工"):  # 限定 "道路施工"
-            mycol.insert_one({"type":"道路施工","place":(Info[size][1]).split(" "),"rdCondition":chatgpt(Info[size][2]),"EventLat&Lng":[],"ChatGPT":[]})
+            mycol.insert_one({"type":"道路施工","place":[],"rdCondition":Info[size][2],"EventLat&Lng":[]})
             AddressTemp.append((Info[size][1]).split(" "))  # 地點
             RoadCondition.append(Info[size][2])  # 路況
+            RdCount.append(size)
     # ----------地點處理轉換成經緯度，因為TDX的快速道路門牌對照API有格式要求----------#
     for address in AddressTemp:
         Index = Index + 1
+        try:
+            mycol.update_one({"rdCondition":RoadCondition[Index-1]},{"$set":{"place":"".join(address)}})
+        except:
+            next
         address[1] = address[1].replace("[", "")
         address[1] = address[1].replace("]", "")
         address[1] = address[1].replace(address[1][-8:], "")
@@ -158,9 +156,10 @@ def Crawling():
                 # address[1]：快速道路 、 address[2]：地點+里程 、 mileage：里程 、 direction：方向、mileageK：整數里程、mileageF1、F2：小數里程
                 url = 'https://tdx.transportdata.tw/api/basic/V3/Map/Road/Sign/RoadClass/1/RoadName/' +address[1]+'/'+str(mileageK)+'K+'+mileageF1+'/to/'+str(mileageK)+'K+'+str(mileageF2)+'?%24top=1&%24format=JSON'
                 if (len(get_data_response(url)) != 0):
-                    arr = get_data_response(url)
-                    locationAll.append(get_data_response(url))
-                    mycol.update_many({"place":AddressTemp[i][1]},{"$set":{"ChatGPT":get_data_response(url)}})
+                    loc = get_data_response(url)
+                    locationAll.append(loc)
+                    #插入事件地點
+                    mycol.update_one({"rdCondition":RoadCondition[Index-1]},{"$set":{"EventLat&Lng":str(loc[0]["Lat"])+","+str(loc[0]["Lon"])}}) 
                 else:
                     try:
                         RoadCondition.pop(Index)
@@ -178,27 +177,7 @@ def Crawling():
                 (tarlat, tarlng), i)  # 生成某點 半徑 1 公里內的圓上的點
             points.append([lat_new, lng_new])
         point2.append(points)  # 用每個點來製造圓並存進point2
-
-    #pymongo insert polygon
-    count_docutment = 0
-    cursor = mycol.find({})
-    for document in cursor:
-        count_docutment = count_docutment + 1
-    for i in range(0,count_docutment):
-        mycol.update_many({"place":AddressTemp[i][1]},{"$set":{"EventLat&Lng":point2[i]}})
-
-# 判斷使用者經緯度有無在point2裡的每個點所生成的園內
-def setLatLng(lat, lng):
-    Count = 0
-    point = Point([lat, lng])
-    for p in point2:
-        Count = Count + 1
-        polygon = Polygon(p)
-        # Detect whether the location is inside the point2 or not
-        print(polygon.contains(point))
-        # If contain in the polygon then send the rdCondition to user
-        if (polygon.contains(point) == False):
-            print("N")
+    pointAll = point2
 
 def set_interval(func, sec):
     def func_wrapper():
@@ -207,4 +186,23 @@ def set_interval(func, sec):
     t = threading.Timer(sec, func_wrapper)
     t.start()
     return t
-set_interval(Crawling,240)        
+
+#Websocket
+@app.get("/send_lat_lng")
+async def send_lat_lng(lat: str, lng: str):
+    return setLatLng(lat,lng)
+# 判斷使用者經緯度有無在point2裡的每個點所生成的園內
+def setLatLng(lat, lng):
+    Count = 0
+    point = Point([lat, lng])
+    for p in pointAll:
+        Count = Count + 1
+        polygon = Polygon(p)
+        # Detect whether the location is inside the point2 or not
+        print(polygon.contains(point))
+        # If contain in the polygon then send the rdCondition to user
+        if (polygon.contains(point) == False):
+            print("False")
+
+set_interval(Crawling,60)
+# set_interval(Crawling,240)        
