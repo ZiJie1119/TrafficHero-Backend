@@ -7,3 +7,4 @@ selenium
 geopy
 python-dotenv
 openai
+apscheduler
