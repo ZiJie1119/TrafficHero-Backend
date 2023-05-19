@@ -16,10 +16,16 @@ import websockets
 from selenium.webdriver.common.by import By
 import openai
 from dotenv import load_dotenv
+import pymongo
 import os
 import sys
 sys.path.append("../../")
 from auth.TDX import Auth,Data,get_data_response
+
+#pymongo
+myclient = pymongo.MongoClient('mongodb://TrafficHero:B109230XX%40%40@eddie.tw:5000')
+mydb = myclient.TrafficHero
+mycol = mydb["pbs"]
 
 # 讀取.env檔案中的變數
 load_dotenv()
@@ -46,11 +52,16 @@ Index = 0
 # 處理抓下來的北部資料
 for data in North:
     Info.append(data.text.split('\n'))
+
+#將資料庫清空    
+mycol.drop()
+
 for size in range(0, len(Info)):
     if (Info[size][0] == "道路施工"):  # 限定 "道路施工"
+        mycol.insert_one({"type":"道路施工","place":(Info[size][1]).split(" "),"rdCondition":Info[size][2],"polygon":[]})
         AddressTemp.append((Info[size][1]).split(" "))  # 地點
         RoadCondition.append(Info[size][2])  # 路況
-
+# print(AddressTemp[0])
 # ----------地點處理轉換成經緯度，因為TDX的快速道路門牌對照API有格式要求----------#
 for address in AddressTemp:
     Index = Index + 1
@@ -60,7 +71,6 @@ for address in AddressTemp:
     address[2] = address[2].replace("km", "")
     direction = address[2][0:2]
     mileage = address[2][2:]
-
     try:
         if (mileage != ''):
             # Send to TDX API process
@@ -96,6 +106,13 @@ for loc in locationAll:
         points.append([lat_new, lng_new])
     point2.append(points)  # 用每個點來製造圓並存進point2
 
+#pymongo insert polygon
+count_docutment = 0
+cursor = mycol.find({})
+for document in cursor:
+    count_docutment = count_docutment + 1
+for i in range(0,count_docutment):
+    mycol.update_many({"place":AddressTemp[i][1]},{"$set":{"polygon":point2[0]}})
 
 # 判斷使用者經緯度有無在point2裡的每個點所生成的園內
 def setLatLng(lat, lng):
@@ -115,9 +132,9 @@ def setLatLng(lat, lng):
 async def sendRdCondition(rdCondition):
     async with websockets.connect('ws://192.168.100.101:5004/getRdCondition') as websocket:
         #print(chatgpt(rdCondition))
-        await websocket.send(rdCondition)
+        await websocket.send(chatgpt(rdCondition))
 
-# ChatGPT
+#ChatGPT
 def chatgpt(str):
     openai.api_key = app_id = os.getenv('OpenAI_Key')
     user = str + "。幫我分類出地點、時間及事件"
