@@ -1,41 +1,29 @@
-import requests
-from pprint import pprint
-import json
-import asyncio
-import time
+
+import urllib.request as req
+import json 
 from fastapi import FastAPI
 from auth.TDX import get_data_response
 from metadata import tags_metadata
-import subprocess
-import time
-from apscheduler.schedulers.blocking import BlockingScheduler
-from datetime import datetime
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 import math
 from geopy.distance import geodesic
-import sys
-from selenium import webdriver
-from selenium.webdriver import ActionChains
-from selenium.webdriver.support.select import Select
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-import requests
-import json
-import asyncio
-import websockets
-from selenium.webdriver.common.by import By
 import openai
 from dotenv import load_dotenv
 import pymongo
 import os
-import sys
 import threading
 from threading import *
 
 app = FastAPI(openapi_tags=tags_metadata)
-pointAll = []
+#pymongo
+myclient = pymongo.MongoClient(os.getenv('MongoDB_URI'))
+mydb = myclient.TrafficHero
+mycol = mydb["pbs"]
+locationAll = []
+points = []
+point2 = []
+ArrPolygon = []
 #TDX
 @app.get("/serviceArea",tags=["serviceArea"])
 async def serviceArea():
@@ -65,15 +53,7 @@ async def sideParking(cityName):
         sideParkingSpace.append(side["ParkingSegmentName"]["Zh_tw"] +" 剩餘位置： " +str(side["AvailableSpaces"]))
     return {"sideParking":sideParkingSpace}
 
-# #Websocket
-@app.get("/websocket")
-async def websocket():
-    command = ['node','index.js']
-    process = subprocess.Popen(command)
-    print(process.stdout)
-
-
-
+#ChatGPT
 def chatgpt(str):
     openai.api_key = app_id = os.getenv('OpenAI_Key')
     user = str + "。幫我分類出地點、時間及事件"
@@ -86,99 +66,37 @@ def chatgpt(str):
             ]
         )
         return (response['choices'][0]['message']['content'])
-def Crawling():
-    #pymongo
-    myclient = pymongo.MongoClient(os.getenv('MongoDB_URI'))
-    mydb = myclient.TrafficHero
-    mycol = mydb["pbs"]
-
-    # 讀取.env檔案中的變數
-    load_dotenv()
-
-    service = Service(ChromeDriverManager().install())
-    browser = webdriver.Chrome(service=service)
-    browser.get("https://rtr.pbs.gov.tw/pbsmgt/RoadAll.html")
-
-    # 透過selenium抓東、南、西、北的路況
-    RoadInfo = browser.find_elements(By.NAME, 'tr')
-    East = browser.find_elements(By.NAME, 'E')
-    West = browser.find_elements(By.NAME, 'W')
-    North = browser.find_elements(By.NAME, 'N')
-    South = browser.find_elements(By.NAME, 'S')
-    Info = []
-    AddressTemp = []
-    locationAll = []
-    points = []
-    point2 = []
-    RoadCondition = []  # 路況說明
-    Index = 0
-    RdCount = []
-
-
-    # 處理抓下來的北部資料
-    for data in North:
-        Info.append(data.text.split('\n'))
-
+#讀取警廣API資料
+def FetchData():
+    url="https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx?DATA=36384FA8-FACF-432E-BB5B-5F015E7BC1BE"
+    with req.urlopen(url) as res3:
+        data =json.load(res3)
     #將資料庫清空    
     mycol.drop()
-
-    for size in range(0, len(Info)):
-        if (Info[size][0] == "道路施工"):  # 限定 "道路施工"
-            mycol.insert_one({"type":"道路施工","place":[],"rdCondition":Info[size][2],"EventLat&Lng":[]})
-            AddressTemp.append((Info[size][1]).split(" "))  # 地點
-            RoadCondition.append(Info[size][2])  # 路況
-            RdCount.append(size)
-    # ----------地點處理轉換成經緯度，因為TDX的快速道路門牌對照API有格式要求----------#
-    for address in AddressTemp:
-        Index = Index + 1
-        try:
-            mycol.update_one({"rdCondition":RoadCondition[Index-1]},{"$set":{"place":"".join(address)}})
-        except:
-            next
-        address[1] = address[1].replace("[", "")
-        address[1] = address[1].replace("]", "")
-        address[1] = address[1].replace(address[1][-8:], "")
-        address[2] = address[2].replace("km", "")
-        direction = address[2][0:2]
-        mileage = address[2][2:]
-        try:
-            if (mileage != ''):
-                # Send to TDX API process
-                mileage = float(mileage)
-                mileageK = int(mileage)  # 整數里程
-                mileageF1 = math.ceil((mileage-mileageK)*1000)  # 小數里程
-                if (mileageF1 == 0):
-                    mileageF1 = "000"
-                    mileageF2 = "100"
-                else:
-                    mileageF2 = int(mileageF1+100)
-                    mileageF1 = str(mileageF1)
-                # address[1]：快速道路 、 address[2]：地點+里程 、 mileage：里程 、 direction：方向、mileageK：整數里程、mileageF1、F2：小數里程
-                url = 'https://tdx.transportdata.tw/api/basic/V3/Map/Road/Sign/RoadClass/1/RoadName/' +address[1]+'/'+str(mileageK)+'K+'+mileageF1+'/to/'+str(mileageK)+'K+'+str(mileageF2)+'?%24top=1&%24format=JSON'
-                if (len(get_data_response(url)) != 0):
-                    loc = get_data_response(url)
-                    locationAll.append(loc)
-                    #插入事件地點
-                    mycol.update_one({"rdCondition":RoadCondition[Index-1]},{"$set":{"EventLat&Lng":str(loc[0]["Lat"])+","+str(loc[0]["Lon"])}}) 
-                else:
-                    try:
-                        RoadCondition.pop(Index)
-                    except:
-                        next
-        except:
-            browser.close()
-            
+    evnLatLng = []
+    arr = []
+    for i in range(0,len(data)):
+        if(data[i]['region'] == 'N' and data[i]['roadtype'] == '道路施工'):
+            evnLatLng.append(data[i]['y1']+","+data[i]['x1'])
+            mycol.insert_one({"type":"道路施工","place":data[i]['areaNm'],"happenDate":data[i]['modDttm'],"rdCondition":data[i]['comment'],"EventLatLng":data[i]['y1']+","+data[i]['x1']})
+    for evn in evnLatLng:
+        if evn not in arr:
+            arr.append(evn)
+#讀取DB內的事件座標再生成圓上的點
+def GeneratePoint():
+    cursor = mycol.find()
+    for doc in cursor:
+        locationAll.append(doc['EventLatLng']) 
     #生成某點半徑 N 公里的圓上座標
     for loc in locationAll:
-        tarlat = str(loc[0]["Lat"])
-        tarlng = str(loc[0]["Lon"])
+        tarlat = str(loc.split(",")[0])
+        tarlng = str(loc.split(",")[1])
         for i in range(0, 360, 360//80):
-            lat_new, lng_new, _ = geodesic(kilometers=1).destination(
-                (tarlat, tarlng), i)  # 生成某點 半徑 1 公里內的圓上的點
+            lat_new, lng_new, _ = geodesic(kilometers=1).destination((tarlat, tarlng), i)  # 生成某點 半徑 1 公里內的圓上的點
             points.append([lat_new, lng_new])
         point2.append(points)  # 用每個點來製造圓並存進point2
-    pointAll = point2
-
+    return point2
+#固定幾秒觸發事件
 def set_interval(func, sec):
     def func_wrapper():
         set_interval(func, sec)
@@ -186,23 +104,20 @@ def set_interval(func, sec):
     t = threading.Timer(sec, func_wrapper)
     t.start()
     return t
-
-#Websocket
+#接收使用者的Lat&Lng
 @app.get("/send_lat_lng")
 async def send_lat_lng(lat: str, lng: str):
-    return setLatLng(lat,lng)
+    return {"Inside the pos or not":setLatLng(lat,lng)}
 # 判斷使用者經緯度有無在point2裡的每個點所生成的園內
 def setLatLng(lat, lng):
     Count = 0
     point = Point([lat, lng])
-    for p in pointAll:
+    for p in GeneratePoint():
         Count = Count + 1
         polygon = Polygon(p)
         # Detect whether the location is inside the point2 or not
-        print(polygon.contains(point))
         # If contain in the polygon then send the rdCondition to user
-        if (polygon.contains(point) == False):
-            print("False")
-
-set_interval(Crawling,60)
-# set_interval(Crawling,240)        
+    if (polygon.contains(point)):
+        doc = mycol.find_one({"EventLatLng":str(lat)+","+str(lng)})
+        print(chatgpt(doc['rdCondition']))
+set_interval(FetchData,30)       
