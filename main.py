@@ -76,12 +76,13 @@ def FetchData():
         data =json.load(res3)
     #將資料庫清空    
     mycol.drop()
+    #將事件插入資料庫
     evnLatLng = []
     for i in range(0,len(data)):
         if(data[i]['region'] == 'N' and data[i]['roadtype'] == '道路施工'):
             evnLatLng.append(data[i]['y1']+","+data[i]['x1'])
             mycol.insert_one({"_id":i,"type":"道路施工","place":data[i]['areaNm'],"happenDate":data[i]['modDttm'],"rdCondition":data[i]['comment'],"EventLatLng":data[i]['y1']+","+data[i]['x1']})
-     #只要有重複地點就刪除
+    #只要有重複地點就刪除
     for duplicate in GetDupicate(evnLatLng):
         mycol.delete_many({"EventLatLng":duplicate})
 #取得重複的座標
@@ -89,21 +90,21 @@ def GetDupicate(L):
     return [e for e in set(L) if L.count(e) > 1]
 #讀取DB內的事件座標再生成圓上的點
 def GeneratePoint():
-    points = []
-    point2 = []
+    points = [] 
+    point2 = [] # 用每個點來製造圓並存進point2
     cursor = mycol.find({})
     for doc in cursor:
         locationAll.append(doc['EventLatLng'])
     #生成某點半徑 N 公里的圓上座標
     for loc in locationAll:
-        tarlat = str(loc.split(",")[0])
-        tarlng = str(loc.split(",")[1])
+        tarlat = str(loc.split(",")[0]) #事件Lat
+        tarlng = str(loc.split(",")[1]) #事件Lng
         for i in range(0, 360, 360//80):
             lat_new, lng_new, _ = geodesic(kilometers=1).destination((tarlat, tarlng), i)  # 生成某點 半徑 1 公里內的圓上的點
             points.append([lat_new, lng_new])
-        point2.append(points)  # 用每個點來製造圓並存進point2
+        point2.append(points)  
         points.clear
-    return point2
+    return point2 
 #接收使用者的Lat&Lng
 @app.get("/send_lat_lng")
 async def send_lat_lng(lat: float, lng: float):
@@ -117,7 +118,7 @@ def setLatLng(lat, lng):
         Count = Count + 1
         polygon = Polygon(p)
         # Detect whether the location is inside the point2 or not
-        # If contain in the polygon then send the rdCondition to user
+        # 判斷使用者有沒有在圓內，如果有就回傳chatgpt處理過後的路況
     if (polygon.contains(point)):
         print("Located！")
         doc = mycol.find_one({"EventLatLng":str(lat)+","+str(lng)})
