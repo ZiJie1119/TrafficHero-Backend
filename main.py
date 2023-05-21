@@ -21,8 +21,6 @@ myclient = pymongo.MongoClient(os.getenv('MongoDB_URI'))
 mydb = myclient.TrafficHero
 mycol = mydb["pbs"]
 locationAll = []
-
-ArrPolygon = []
 #TDX
 @app.get("/serviceArea",tags=["serviceArea"])
 async def serviceArea():
@@ -52,6 +50,12 @@ async def sideParking(cityName):
         sideParkingSpace.append(side["ParkingSegmentName"]["Zh_tw"] +" 剩餘位置： " +str(side["AvailableSpaces"]))
     return {"sideParking":sideParkingSpace}
 
+@app.get("/reviseDB/{ID},{Content}")
+async def reviseDB(ID,Content):
+    if(Content != ""):
+        mycol.update_one({"_id":ID},{"$set":{"rdCondition":Content}})
+    for doc in mycol.find():
+        print(doc)
 #ChatGPT
 def chatgpt(str):
     openai.api_key = app_id = os.getenv('OpenAI_Key')
@@ -76,7 +80,7 @@ def FetchData():
     for i in range(0,len(data)):
         if(data[i]['region'] == 'N' and data[i]['roadtype'] == '道路施工'):
             evnLatLng.append(data[i]['y1']+","+data[i]['x1'])
-            mycol.insert_one({"type":"道路施工","place":data[i]['areaNm'],"happenDate":data[i]['modDttm'],"rdCondition":data[i]['comment'],"EventLatLng":data[i]['y1']+","+data[i]['x1']})
+            mycol.insert_one({"_id":i,"type":"道路施工","place":data[i]['areaNm'],"happenDate":data[i]['modDttm'],"rdCondition":data[i]['comment'],"EventLatLng":data[i]['y1']+","+data[i]['x1']})
      #只要有重複地點就刪除
     for duplicate in GetDupicate(evnLatLng):
         mycol.delete_many({"EventLatLng":duplicate})
@@ -100,14 +104,6 @@ def GeneratePoint():
         point2.append(points)  # 用每個點來製造圓並存進point2
         points.clear
     return point2
-#固定幾秒觸發事件
-def set_interval(func, sec):
-    def func_wrapper():
-        set_interval(func, sec)
-        func()
-    t = threading.Timer(sec, func_wrapper)
-    t.start()
-    return t
 #接收使用者的Lat&Lng
 @app.get("/send_lat_lng")
 async def send_lat_lng(lat: float, lng: float):
@@ -128,4 +124,13 @@ def setLatLng(lat, lng):
         msg = "地點："+doc['place'] +'\n'+ chatgpt(doc['rdCondition'])
     print(msg)
     return (msg)
+
+#固定幾秒觸發事件
+def set_interval(func, sec):
+    def func_wrapper():
+        set_interval(func, sec)
+        func()
+    t = threading.Timer(sec, func_wrapper)
+    t.start()
+    return t
 set_interval(FetchData,10)       
