@@ -21,8 +21,7 @@ myclient = pymongo.MongoClient(os.getenv('MongoDB_URI'))
 mydb = myclient.TrafficHero
 mycol = mydb["pbs"]
 locationAll = []
-points = []
-point2 = []
+
 ArrPolygon = []
 #TDX
 @app.get("/serviceArea",tags=["serviceArea"])
@@ -56,7 +55,7 @@ async def sideParking(cityName):
 #ChatGPT
 def chatgpt(str):
     openai.api_key = app_id = os.getenv('OpenAI_Key')
-    user = str + "。幫我分類出地點、時間及事件"
+    user = str + "。幫我分類出時間及事件"
     if user:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -74,19 +73,23 @@ def FetchData():
     #將資料庫清空    
     mycol.drop()
     evnLatLng = []
-    arr = []
     for i in range(0,len(data)):
         if(data[i]['region'] == 'N' and data[i]['roadtype'] == '道路施工'):
             evnLatLng.append(data[i]['y1']+","+data[i]['x1'])
             mycol.insert_one({"type":"道路施工","place":data[i]['areaNm'],"happenDate":data[i]['modDttm'],"rdCondition":data[i]['comment'],"EventLatLng":data[i]['y1']+","+data[i]['x1']})
-    for evn in evnLatLng:
-        if evn not in arr:
-            arr.append(evn)
+     #只要有重複地點就刪除
+    for duplicate in GetDupicate(evnLatLng):
+        mycol.delete_many({"EventLatLng":duplicate})
+#取得重複的座標
+def GetDupicate(L):
+    return [e for e in set(L) if L.count(e) > 1]
 #讀取DB內的事件座標再生成圓上的點
 def GeneratePoint():
-    cursor = mycol.find()
+    points = []
+    point2 = []
+    cursor = mycol.find({})
     for doc in cursor:
-        locationAll.append(doc['EventLatLng']) 
+        locationAll.append(doc['EventLatLng'])
     #生成某點半徑 N 公里的圓上座標
     for loc in locationAll:
         tarlat = str(loc.split(",")[0])
@@ -95,6 +98,7 @@ def GeneratePoint():
             lat_new, lng_new, _ = geodesic(kilometers=1).destination((tarlat, tarlng), i)  # 生成某點 半徑 1 公里內的圓上的點
             points.append([lat_new, lng_new])
         point2.append(points)  # 用每個點來製造圓並存進point2
+        points.clear
     return point2
 #固定幾秒觸發事件
 def set_interval(func, sec):
@@ -106,18 +110,22 @@ def set_interval(func, sec):
     return t
 #接收使用者的Lat&Lng
 @app.get("/send_lat_lng")
-async def send_lat_lng(lat: str, lng: str):
+async def send_lat_lng(lat: float, lng: float):
     return {"Inside the pos or not":setLatLng(lat,lng)}
 # 判斷使用者經緯度有無在point2裡的每個點所生成的園內
 def setLatLng(lat, lng):
     Count = 0
     point = Point([lat, lng])
+    msg = ""
     for p in GeneratePoint():
         Count = Count + 1
         polygon = Polygon(p)
         # Detect whether the location is inside the point2 or not
         # If contain in the polygon then send the rdCondition to user
     if (polygon.contains(point)):
+        print("Located！")
         doc = mycol.find_one({"EventLatLng":str(lat)+","+str(lng)})
-        print(chatgpt(doc['rdCondition']))
-set_interval(FetchData,30)       
+        msg = "地點："+doc['place'] +'\n'+ chatgpt(doc['rdCondition'])
+    print(msg)
+    return (msg)
+set_interval(FetchData,10)       
