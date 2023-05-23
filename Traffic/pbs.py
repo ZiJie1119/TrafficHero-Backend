@@ -9,7 +9,7 @@ from geopy.distance import geodesic
 
 #讀取警廣API資料
 def FetchData():
-    url="https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx?DATA=36384FA8-FACF-432E-BB5B-5F015E7BC1BE"
+    url="https://od.moi.gov.tw/MOI/v1/pbs"
     with req.urlopen(url) as res3:
         data =json.load(res3)
     #將資料庫清空    
