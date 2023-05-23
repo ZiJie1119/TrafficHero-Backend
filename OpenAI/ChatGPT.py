@@ -1,8 +1,9 @@
 from fastapi import APIRouter
 import openai
+import os
+from MongoDB.MongoDB import mycol
 
 router = APIRouter(tags=["OpenAI API"])
-
 @router.get("/reviseDB/{ID},{Content}")
 async def reviseDB(ID,Content):
     if(Content != ""):

@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from FastAPI.metadata import tags_metadata
+from OpenAI.ChatGPT import chatgpt
 from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
 import math
-from geopy.distance import geodesic
 import threading
 from threading import *
-from Traffic import tdx, pbs
-
+from MongoDB.MongoDB import mycol
+from Traffic.pbs import GeneratePoint
+from Traffic import tdx
 app = FastAPI()
 
 # TDX
@@ -17,26 +17,26 @@ app.include_router(tdx.router, prefix="/tdx")
 # @app.on_event("startup")
 # async def startup_event():
 #     pbs.FetchData()
-
-
+def get_key(dict,value):
+    return [k for k,v in dict.items() if v == value]
 #接收使用者的Lat&Lng
 @app.get("/send_lat_lng")
-async def send_lat_lng(lat: float, lng: float):
+async def send_lat_lng(lat: str, lng: str):
     return {"Inside the pos or not":setLatLng(lat,lng)}
+
 # 判斷使用者經緯度有無在point2裡的每個點所生成的園內
 def setLatLng(lat, lng):
-    Count = 0
     point = Point([lat, lng])
-    msg = ""
-    for p in GeneratePoint():
-        Count = Count + 1
-        polygon = Polygon(p)
-        # Detect whether the location is inside the point2 or not
-        # 判斷使用者有沒有在圓內，如果有就回傳chatgpt處理過後的路況
-    if (polygon.contains(point)):
-        print("Located！")
-        doc = mycol.find_one({"EventLatLng":str(lat)+","+str(lng)})
-        msg = "地點："+doc['place'] +'\n'+ chatgpt(doc['rdCondition'])
+    msg = "" 
+    # Detect whether the location is inside the point2 or not
+    # 判斷使用者有沒有在圓內，如果有就回傳chatgpt處理過後的路況   
+    for pos in GeneratePoint().values():
+        print(pos)
+        if (pos.contains(point)):
+            print("Located！")
+            doc = mycol.find_one({"EventLatLng":get_key(GeneratePoint(),pos)[0][0]+","+get_key(GeneratePoint(),pos)[0][1]})
+            break
+    msg = "地點："+doc['place'] +'\n'+ chatgpt(doc['rdCondition'])
     print(msg)
     return (msg)
 
